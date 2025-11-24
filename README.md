@@ -101,6 +101,95 @@ Percebe-se que, em poucos minutos e com poucos comandos, foi possível acessar u
 
 #### Fim do exercício
 
+## Exercício: Ataques de força bruta aplicados em formulários de login em sistemas web
+
+Neste exercício, será possível entender como os ataques de força bruta funcionam também em sistemas web, especialmente em formulários de login.
+
+Utilizaremos o DVWA, uma ferramenta que contém diversos tipos de vulnerabilidades web.
+
+Na máquina Kali Linux, abriu-se o navegador e digitou-se a seguinte URL:
+
+**http://192.168.56.102/dvwa/login.php**
+
+E irá apresentar a tela de login:
+
+![Tela dvwa](https://github.com/ThaisAp10/simulando-um-ataque-de-brute-force-de-senhas-com-medusa-e-kali-linux/blob/main/img/tela12.png)
+
+Para realizar o acesso a tela de login do DVWA, primeiramente teremos que criar uma lista de usuários e senhas, wordlists. Os comandos são os já utilizados no exercício anterior:
+
+**echo -e "user\nmsfadmin\nadmin\nroot" > users.txt**
+
+**echo -e "123456\npassword\nqwerty\nmsfadmin" > pass.txt**
+
+Após a criação das wordlists, iremos utilizar o Medusa para simular combinações entre usuários e senhas. Segue o comando utilizado:
+
+![Terminal Kali Linux login](https://github.com/ThaisAp10/simulando-um-ataque-de-brute-force-de-senhas-com-medusa-e-kali-linux/blob/main/img/tela13.png)
+
+O Medusa acessará a máquina alvo e usará os arquivos de usuários e senhas para testar o formulário em dvwa/login.php. Ao executar o comando, o Medusa retornará resultados. Quando aparecer [SUCCESS], a combinação é válida e você poderá testar o acesso com esses dados. Observe que, após o primeiro [SUCCESS], podem aparecer outros [SUCCESS] para combinações diferentes. Verifique o par usuário/senha correto.
+
+![Terminal Kali Linux users](https://github.com/ThaisAp10/simulando-um-ataque-de-brute-force-de-senhas-com-medusa-e-kali-linux/blob/main/img/tela14.png)
+
+Após inserir o usuário e senha success na url (http://192.168.56.102/dvwa/login.php), carregará a seguinte tela:
+
+![Tela dvwa acesso](https://github.com/ThaisAp10/simulando-um-ataque-de-brute-force-de-senhas-com-medusa-e-kali-linux/blob/main/img/tela15.png)
+
+Vale ressaltar que, em ambientes reais, o acesso obtido por força bruta pode causar danos graves. Para reduzir esse risco, implemente medidas de proteção como autenticação de dois fatores, CAPTCHA e bloqueio de contas após tentativas repetidas, entre outras práticas de segurança.
+
+
+#### Fim do exercício
+
+## Exercício: Ataque em cadeia, enumeração smb + password spraying
+
+Neste exercício será simulado um ataque de enumeração e password spraying contra um serviço SMB. SMB (Server Message Block) é um protocolo da Microsoft usado para compartilhamento de arquivos, pastas e impressoras, autenticação de usuários e comunicação entre máquinas Windows e sistemas Linux via Samba. Quando mal configurado ou exposto à Internet, o SMB pode se tornar um ponto crítico de vulnerabilidade em redes internas.
+
+Suponha que, a partir de um phishing, acesso físico ou outro vetor, foi possível alcançar a rede interna e identificar um servidor SMB ativo. Em seguida, é possível enumerar usuários do sistema e testar senhas fracas de forma discreta sem bloquear contas utilizando a técnica conhecida como password spraying, que consiste em testar a mesma senha comum em vários usuários diferentes.
+
+Para isso, usaremos a ferramenta enum4linux, que interage com o protocolo SMB. No Kali Linux, com o terminal aberto, foi executado o seguinte comando:
+
+**enum4linux –a 192.168.56.102 | tee enum4_output.txt**
+
+Este comando realizará a enumeração de informações de um sistema e, simultaneamente, exibe e salva esses resultados em um arquivo de nome enum4_output.txt.
+
+![Terminal Kali Linux comando 2](https://github.com/ThaisAp10/simulando-um-ataque-de-brute-force-de-senhas-com-medusa-e-kali-linux/blob/main/img/tela16.png)
+
+Ao executar o comando irá exibir uma série de informações, e após foi digitado o comando:
+
+**less enum4_output_auth.txt**
+
+Este comando abre o arquivo enum4_output_auth.txt em modo somente leitura, permitindo a navegação do conteúdo sem possibilidade de edição. No print a seguir são exibidos os nomes de contas presentes no sistema remoto, o campo rid corresponde ao identificador relativo do usuário (relative identifier). Essas entradas servirão como base para a enumeração e análise subsequente.
+
+![Resultado comando](https://github.com/ThaisAp10/simulando-um-ataque-de-brute-force-de-senhas-com-medusa-e-kali-linux/blob/main/img/tela17.png)
+
+Agora com esta lista com os nomes dos usuários reais, vai ser criada uma wordlist de usuários e uma wordlist de senhas com os seguintes comandos:
+
+**echo -e "user\nmsfadmin\nservice" > smb_users.txt**
+
+**echo -e "password\n123456\nWelcome123\nmsfadmin" > senhas_spray.txt**
+
+Depois executado o comando do medusa:
+
+**medusa -h 192.168.56.102 -U smb_users.txt -P senhas_spray.txt -M smbnt -t 2 -T 50**
+
+Ao executar este comando exibirá o seguinte resultado:
+
+![Resultado comando success](https://github.com/ThaisAp10/simulando-um-ataque-de-brute-force-de-senhas-com-medusa-e-kali-linux/blob/main/img/tela18.png)
+
+O processo realiza testes e, ao encontrar um usuário e senha válidos, exibirá a mensagem "ACCOUNT FOUND", indicando que o acesso foi obtido com sucesso e que o usuário tem permissões de administrador. Para testar o acesso, o comando é executado utilizando o usuário encontrado.
+
+**smbclient -L //192.168.56.102 -U msfadmin**
+
+Ao executar o comando e solicitar a senha e ao digitar a senha corretamente, irá exibir os acessos disponíveis.
+
+![Comando acessos](https://github.com/ThaisAp10/simulando-um-ataque-de-brute-force-de-senhas-com-medusa-e-kali-linux/blob/main/img/tela19.png)
+
+Esse acesso permite upload/download de arquivos, leitura/escrita em diretórios e execução de comandos, o que, em um ambiente real, representa um comprometimento grave da confidencialidade, integridade e disponibilidade.
+
+Todos os testes descritos neste relatório foram realizados em ambiente controlado e autorizado, sem impactos em sistemas produtivos, os resultados evidenciam fragilidades que reforçam a importância de uma abordagem abrangente de segurança da informação, incluindo correções imediatas (patching), revisão de privilégios e políticas de acesso (princípio do menor privilégio), controles de detecção e monitoramento contínuo, gerenciamento de senhas e autenticação multifator, backups regulares e conscientização dos usuários.
+
+
+
+
+
 
 
 
